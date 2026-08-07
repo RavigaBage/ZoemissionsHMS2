@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #FBF7EC;
+  --color-cream-deep: #F3ECDA;
+  --color-emerald-900: #0B4530;
+  --color-emerald-700: #135C3D;
+  --color-emerald-600: #1C7A52;
+  --color-emerald-100: #E4F1E9;
+  --color-gold-700: #A97B1F;
+  --color-gold-600: #C99A2E;
+  --color-gold-200: #F3DFA0;
+  --color-gold-100: #FBEFCF;
+  --color-ink: #21281F;
+  --color-ink-soft: #54604F;
+  --color-line: #E4DCC4;
+
+  --font-serif: 'Fraunces', serif;
+  --font-sans: 'Public Sans', sans-serif;
+}
+
+:root {
+  --cream: #FBF7EC;
+  --cream-deep: #F3ECDA;
+  --white: #FFFFFF;
+  --emerald-900: #0B4530;
+  --emerald-700: #135C3D;
+  --emerald-600: #1C7A52;
+  --emerald-100: #E4F1E9;
+  --gold-700: #A97B1F;
+  --gold-600: #C99A2E;
+  --gold-200: #F3DFA0;
+  --gold-100: #FBEFCF;
+  --ink: #21281F;
+  --ink-soft: #54604F;
+  --line: #E4DCC4;
+}
+
+body {
+  margin: 0;
+  background-color: var(--cream);
+  color: var(--ink);
+  font-family: 'Public Sans', sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: 'Fraunces', serif;
+  color: var(--emerald-900);
+}
+
