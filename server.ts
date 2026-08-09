@@ -27,6 +27,7 @@ interface EncounterItem {
   id: string;
   patient_id: string;
   ticket_number: string;
+  ticket_rank: number;
   lane: 'general' | 'emergency';
   status: 'registered' | 'triaged' | 'consulted' | 'pharmacy' | 'completed';
   triage_flag: 'red' | 'yellow' | 'green' | 'none';
@@ -321,6 +322,29 @@ const db = {
 };
 
 // Helper token generator / store
+const getEncounterTime = (encounter: EncounterItem) => new Date(encounter.created_at).getTime();
+
+const sortByTicketRank = (a: EncounterItem, b: EncounterItem) => {
+  const rankA = a.ticket_rank ?? Number.MAX_SAFE_INTEGER;
+  const rankB = b.ticket_rank ?? Number.MAX_SAFE_INTEGER;
+  if (rankA !== rankB) return rankA - rankB;
+  return getEncounterTime(a) - getEncounterTime(b);
+};
+
+let ticketRankCounter = 0;
+for (const encounter of [...db.encounters].sort((a, b) => getEncounterTime(a) - getEncounterTime(b))) {
+  ticketRankCounter += 1;
+  encounter.ticket_rank = encounter.ticket_rank ?? ticketRankCounter;
+  encounter.ticket_number = encounter.ticket_number || `TKT-${String(encounter.ticket_rank).padStart(4, '0')}`;
+}
+
+const nextTicketRank = () => {
+  ticketRankCounter += 1;
+  return ticketRankCounter;
+};
+
+const nextTicketNumber = () => `TKT-${String(ticketRankCounter + 1).padStart(4, '0')}`;
+
 const tokens: Record<string, StaffItem> = {
   'token_doctor_sarah': db.staff[0],
   'token_triage_joseph': db.staff[1],
@@ -520,7 +544,9 @@ async function startServer() {
       list = list.filter((e) => e.triage_flag === String(triage_flag));
     }
 
-    const enriched = list.map((enc) => {
+    const rankedList = [...list].sort(sortByTicketRank);
+
+    const enriched = rankedList.map((enc) => {
       const patient = db.patients.find((p) => p.id === enc.patient_id);
       const vitals = db.vitals.filter((v) => v.encounter_id === enc.id);
       const consultation = db.consultations.find((c) => c.encounter_id === enc.id);
@@ -548,7 +574,8 @@ async function startServer() {
     const newEncounter: EncounterItem = {
       id: `enc_${Date.now()}`,
       patient_id,
-      ticket_number: `TKT-${Math.floor(1000 + Math.random() * 9000)}`,
+      ticket_number: nextTicketNumber(),
+      ticket_rank: nextTicketRank(),
       lane: lane === 'emergency' ? 'emergency' : 'general',
       status: status || 'registered',
       triage_flag: triage_flag || 'none',
@@ -606,7 +633,7 @@ async function startServer() {
     if (idx === -1) return res.status(404).json({ message: 'Vitals not found' });
     
     const currentUser = (req as any).user;
-    if (db.vitals[idx].recorded_by_id !== currentUser.id && currentUser.role !== 'admin') {
+    if (db.vitals[idx].recorded_by !== currentUser.name && currentUser.role !== 'admin') {
        return res.status(403).json({ message: 'Forbidden' });
     }
 
@@ -669,7 +696,7 @@ async function startServer() {
   });
 
   app.post('/api/consultations', authMiddleware, (req, res) => {
-    const { encounter_id, chief_complaint, findings, diagnosis, notes, prescriptions } = req.body;
+    const { encounter_id, chief_complaint, findings, diagnosis, notes, prescriptions, completed } = req.body;
     if (!encounter_id) {
       return res.status(422).json({ message: 'Something required was left blank. Check the highlighted field.' });
     }
@@ -714,8 +741,13 @@ async function startServer() {
       }
     }
 
-    // Advance encounter status
-    enc.status = 'consulted';
+    // Advance encounter status based on the doctor's decision.
+    // Patients with prescriptions go to pharmacy unless the doctor explicitly completes the visit.
+    if (completed || createdPrescriptions.length === 0) {
+      enc.status = 'completed';
+    } else {
+      enc.status = 'pharmacy';
+    }
     enc.updated_at = new Date().toISOString();
 
     return res.status(201).json({ ...newConsultation, prescriptions: createdPrescriptions });
@@ -748,14 +780,43 @@ async function startServer() {
     if (!cns) {
       return res.status(404).json({ message: "That record doesn't exist — it may have been removed." });
     }
-    const { chief_complaint, findings, diagnosis, notes } = req.body;
+    const { chief_complaint, findings, diagnosis, notes, prescriptions, completed } = req.body;
     if (chief_complaint !== undefined) cns.chief_complaint = chief_complaint;
     if (findings !== undefined) cns.findings = findings;
     if (diagnosis !== undefined) cns.diagnosis = diagnosis;
     if (notes !== undefined) cns.notes = notes;
     cns.updated_at = new Date().toISOString();
 
-    return res.json(cns);
+    const enc = db.encounters.find((e) => e.id === cns.encounter_id);
+    if (Array.isArray(prescriptions)) {
+      db.prescriptions = db.prescriptions.filter((pr) => pr.consultation_id !== cns.id);
+      for (const pr of prescriptions) {
+        if (pr.medication_id && pr.quantity_prescribed) {
+          db.prescriptions.push({
+            id: `prc_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            consultation_id: cns.id,
+            medication_id: pr.medication_id,
+            dosage_instructions: pr.dosage_instructions || null,
+            quantity_prescribed: Number(pr.quantity_prescribed),
+            quantity_dispensed: 0,
+            status: 'pending',
+            created_at: new Date().toISOString(),
+          });
+        }
+      }
+    }
+
+    const activePrescriptions = db.prescriptions.filter((pr) => pr.consultation_id === cns.id);
+    if (enc) {
+      if (completed || activePrescriptions.length === 0) {
+        enc.status = 'completed';
+      } else {
+        enc.status = 'pharmacy';
+      }
+      enc.updated_at = new Date().toISOString();
+    }
+
+    return res.json({ ...cns, prescriptions: activePrescriptions });
   });
 
   // Medications
@@ -803,8 +864,16 @@ async function startServer() {
     const page = parseInt(String(req.query.page || '1'), 10);
     const limit = parseInt(String(req.query.limit || '10'), 10);
     const status = req.query.status ? String(req.query.status) : null;
+    const consultationId = req.query.consultation_id ? String(req.query.consultation_id) : null;
 
     let filtered = db.prescriptions;
+    if (consultationId) {
+      filtered = filtered.filter((p) => p.consultation_id === consultationId);
+      return res.json(filtered.map((pr) => ({
+        ...pr,
+        medication: db.medications.find((m) => m.id === pr.medication_id),
+      })));
+    }
     if (status) {
       filtered = filtered.filter((p) => p.status === status);
     }

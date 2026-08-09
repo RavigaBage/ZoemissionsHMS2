@@ -22,7 +22,7 @@ export const DispensingPage: React.FC = () => {
     setIsLoading(true);
     try {
       const encData = await api.get<Encounter[]>('/api/encounters?status=pharmacy');
-      setEncounters(encData);
+      setEncounters([...encData].sort((a, b) => (a.ticket_rank ?? Number.MAX_SAFE_INTEGER) - (b.ticket_rank ?? Number.MAX_SAFE_INTEGER)));
       
       const medsData = await api.get<Medication[]>('/api/medications');
       setMedications(medsData);
@@ -70,10 +70,16 @@ export const DispensingPage: React.FC = () => {
         }
       }
 
-      await api.post('/api/dispensing', {
+      const result = await api.post<{ remaining_stock: number }>('/api/dispensing', {
         prescription_id: prescription.id,
         quantity_dispensed: prescription.quantity_prescribed
       });
+
+      setMedications(prev => prev.map(item =>
+        item.id === prescription.medication_id
+          ? { ...item, quantity_in_stock: result.remaining_stock }
+          : item
+      ));
       
       showSuccess('Dispensed', 'Prescription marked as dispensed.');
       
@@ -107,7 +113,7 @@ export const DispensingPage: React.FC = () => {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <div>
         <h1 className="font-serif text-3xl font-bold text-emerald-900">Pharmacy Queue</h1>
-        <p className="text-sm text-ink-soft mt-1">Dispense medications and fulfill prescriptions.</p>
+        <p className="text-sm text-ink-soft mt-1">Dispense in ticket-rank order and update stock as each prescription is fulfilled.</p>
       </div>
 
       {encounters.length === 0 ? (

@@ -31,6 +31,7 @@ export interface Encounter {
   patient_id: string;
   patient?: Patient;
   ticket_number: string;
+  ticket_rank?: number;
   lane: Lane;
   status: EncounterStatus;
   triage_flag: TriageFlag;
