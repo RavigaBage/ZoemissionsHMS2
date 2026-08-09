@@ -113,7 +113,7 @@ export const NewConsultationPage: React.FC = () => {
 
       const returnobj = consultationId 
         ? await api.patch<Consultation>(`/api/consultations/${consultationId}`, payload) 
-        : await api.post<Consultation>('/api/consultations/', payload);
+        : await api.post<Consultation>('/api/consultations', payload);
       
       showSuccess(consultationId ? 'Updated' : 'Saved', consultationId ? 'Consultation updated successfully.' : 'Consultation recorded successfully.');
       navigate('/dashboard');
@@ -190,12 +190,12 @@ export const NewConsultationPage: React.FC = () => {
                 {patient.first_name} {patient.Other_name}
               </h3>
               <p className="text-xs text-[var(--ink-soft)] mt-0.5">
-                Age: {patient.approx_age ?? 'N/A'} yrs &bull; Gender: {patient.gender || 'N/A'} &bull; Village: {patient.village || 'N/A'}
+                Age: {patient.approx_age ?? 'N/A'} yrs &bull; Gender: {patient.gender || 'N/A'} &bull; Village: {patient.village || 'N/A'} &bull; Phone: {patient.phone || 'N/A'}
               </p>
             </div>
             <div className="text-right">
               <span className="text-xs font-bold uppercase tracking-wider text-red-700 bg-red-50 border border-red-200 px-3 py-1 rounded-full">
-                {encounter.lane} lane &bull; triage: {encounter.triage_flag}
+                Ticket {encounter.ticket_number} &bull; Rank #{encounter.ticket_rank || 'N/A'} &bull; {encounter.lane} lane &bull; triage: {encounter.triage_flag}
               </span>
             </div>
           </div>
@@ -222,6 +222,9 @@ export const NewConsultationPage: React.FC = () => {
                 <div>BP: <strong className="text-[var(--emerald-900)]">{vitals.bp_systolic && vitals.bp_diastolic ? `${vitals.bp_systolic}/${vitals.bp_diastolic}` : 'N/A'}</strong></div>
                 <div>Pulse: <strong className="text-[var(--emerald-900)]">{vitals.pulse !== null ? `${vitals.pulse} bpm` : 'N/A'}</strong></div>
                 <div>SpO2: <strong className="text-[var(--emerald-900)]">{vitals.spo2 !== null ? `${vitals.spo2} %` : 'N/A'}</strong></div>
+                <div>Resp: <strong className="text-[var(--emerald-900)]">{vitals.resp_rate !== null ? `${vitals.resp_rate} /min` : 'N/A'}</strong></div>
+                <div>Weight: <strong className="text-[var(--emerald-900)]">{vitals.weight_kg !== null ? `${vitals.weight_kg} kg` : 'N/A'}</strong></div>
+                <div>Recorded by: <strong className="text-[var(--emerald-900)]">{vitals.recorded_by || 'N/A'}</strong></div>
               </div>
             </div>
           )}
@@ -397,16 +400,16 @@ export const NewConsultationPage: React.FC = () => {
           )}
         </div>
         <div className=''>
-          <p>Check if patient will not need to visit the pharmacy</p>
-          <input type='checkbox' onChange={(e)=>
-          {
-            if(e.target.checked){
-               setcompletedBool(true)
-            }
-            
-          }
-           
-          } />
+          <label className="flex items-center gap-3 text-sm font-bold text-[var(--emerald-900)]">
+            <input
+              type="checkbox"
+              checked={completedBool}
+              onChange={(e) => setcompletedBool(e.target.checked)}
+              className="w-5 h-5 rounded border-[var(--line)] text-[var(--emerald-700)]"
+            />
+            Mark patient as completed here and skip pharmacy queue
+          </label>
+          <p className="text-xs text-[var(--ink-soft)] mt-1">Leave unchecked when prescriptions should go to dispensing after consultation.</p>
         </div>
 
         {/* Submit */}

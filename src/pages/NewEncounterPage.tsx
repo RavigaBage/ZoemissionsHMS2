@@ -75,13 +75,14 @@ export const NewEncounterPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const newEnc = await api.get<[Encounter]>(`/api/encounters?patient_id=${selectedPatientId}`);
-      var filteredEncounter = ""
-      if(newEnc && newEnc.length > 0){
-        
-        filteredEncounter = newEnc[0].id;
-      }
-      navigate(`/vitals/new?encounter_id=${filteredEncounter}`);
+      const encounter = await api.post<Encounter>('/api/encounters', {
+        patient_id: selectedPatientId,
+        lane,
+        triage_flag: triageFlag,
+      });
+      setCreatedEncounter(encounter);
+      showSuccess('Ticket Issued', `${selectedPatient?.first_name || 'Patient'} was issued ${encounter.ticket_number}.`);
+      navigate(`/vitals/new?encounter_id=${encounter.id}`);
     } catch (err: any) {
       setError(err.message || 'Failed to create patient check-in.');
     } finally {

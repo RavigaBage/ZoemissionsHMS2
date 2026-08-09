@@ -22,7 +22,10 @@ export const DispensingHistoryPage: React.FC = () => {
       // Because /api/dispensing might not have a GET endpoint, let's assume it's created or we fetch locally.
       // Wait, is there a GET /api/dispensings? Let's assume yes, or we'll add one.
       const dData = await api.get<Dispensing[]>('/api/dispensings').catch(() => []); 
-      const pData = await api.get<Prescription[]>('/api/prescriptions').catch(() => []);
+      const prescriptionResponse = await api.get<any>('/api/prescriptions').catch(() => []);
+      const pData: Prescription[] = Array.isArray(prescriptionResponse)
+        ? prescriptionResponse
+        : (prescriptionResponse?.data || []);
       const mData = await api.get<Medication[]>('/api/medications').catch(() => []);
       
       const mMap = mData.reduce((acc, m) => ({ ...acc, [m.id]: m }), {} as any);
@@ -40,7 +43,7 @@ export const DispensingHistoryPage: React.FC = () => {
   const handleDelete = async (d: Dispensing) => {
     if (!window.confirm('Are you sure you want to delete this dispensing record?')) return;
     try {
-      await api.delete(`/api/dispensing/\${d.id}`);
+      await api.delete(`/api/dispensing/${d.id}`);
       showSuccess('Deleted', 'Dispensing record removed successfully.');
       fetchHistory();
     } catch (err: any) {

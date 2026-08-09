@@ -21,6 +21,11 @@ export function TicketCard({ encounter, className = '' }: TicketCardProps) {
       {/* Main Ticket Content */}
       <div className="flex-1 p-4 flex flex-col justify-center">
         <p className="text-xs text-ink-soft uppercase tracking-wider font-semibold mb-1">Ticket No.</p>
+        {encounter.ticket_rank && (
+          <p className="text-[10px] font-bold uppercase tracking-wider text-gold-700 mb-1">
+            Queue Rank #{encounter.ticket_rank}
+          </p>
+        )}
         <h3 className="font-serif text-3xl text-emerald-900 leading-none mb-2">
           {encounter.ticket_number}
         </h3>

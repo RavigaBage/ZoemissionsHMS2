@@ -26,7 +26,9 @@ export const QueuePage: React.FC = () => {
       const patData = await api.get<Patient[]>('/api/patients');
       const pats = patData.reduce((acc, p) => ({ ...acc, [p.id]: p }), {} as Record<string, Patient>);
       
-      const populated = data.map(e => ({ ...e, patient: pats[e.patient_id] }));
+      const populated = data
+        .map(e => ({ ...e, patient: pats[e.patient_id] }))
+        .sort((a, b) => (a.ticket_rank ?? Number.MAX_SAFE_INTEGER) - (b.ticket_rank ?? Number.MAX_SAFE_INTEGER));
       setEncounters(populated);
     } catch (err: any) {
       showError('Error', err.message || 'Failed to fetch queue');
@@ -38,7 +40,7 @@ export const QueuePage: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this encounter?')) return;
     try {
-      await api.delete(`/api/encounters/\${id}`);
+      await api.delete(`/api/encounters/${id}`);
       showSuccess('Deleted', 'Encounter removed successfully.');
       fetchQueue();
     } catch (err: any) {
@@ -60,7 +62,7 @@ export const QueuePage: React.FC = () => {
             <ClipboardList className="w-8 h-8" />
             Queue Tracker
           </h1>
-          <p className="text-sm text-ink-soft mt-1">View all patient encounters and statuses.</p>
+          <p className="text-sm text-ink-soft mt-1">Ranked by ticket issue order so the earliest patient is seen first.</p>
         </div>
         <div className="relative w-full sm:w-72">
           <Search className="absolute left-3 top-2.5 w-4 h-4 text-ink-soft" />

@@ -53,6 +53,20 @@ export const NewPatientPage: React.FC = () => {
 
       const newPatient = await api.post<Patient>('/api/patients', patientPayload);
 
+      if (autoCheckIn) {
+        const encounter = await api.post<any>('/api/encounters', {
+          patient_id: newPatient.id,
+          lane,
+          triage_flag: triageFlag,
+        });
+        showSuccess(
+          'Patient Registered & Ticket Issued',
+          `${newPatient.first_name} ${newPatient.Other_name} was issued ${encounter.ticket_number}.`
+        );
+        navigate(`/vitals/new?encounter_id=${encounter.id}`);
+        return;
+      }
+
       showSuccess('Patient Registered', `${newPatient.first_name} ${newPatient.Other_name} registered successfully.`);
       navigate(`/patients/${newPatient.id}`);
     } catch (err: any) {
