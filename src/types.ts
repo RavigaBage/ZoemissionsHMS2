@@ -39,17 +39,21 @@ export interface Encounter {
   updated_at?: string;
 }
 export interface Queue{
-    patient_id: number,
-    encounter_id: number,
+    patient_id: string,
+    encounter_id: string,
     queue_number: string,
+    ticket_number: string,
+    ticket_rank?: number,
     current_stage: QueueStatus,
-    status: QueueStatus,
-    emergency_flag: string,
-    assigned_staff_id: number,
+    status: EncounterStatus,
+    lane: Lane,
+    emergency_flag: TriageFlag,
+    triage_flag: TriageFlag,
+    assigned_staff_id: number | null,
     id: string,
     created_at: string,
-    updated_at: string
-    patient:Patient
+    updated_at: string,
+    patient:Patient | null
 }
 export interface Vitals {
   id: string;

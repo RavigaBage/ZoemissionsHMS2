@@ -215,7 +215,7 @@ export const PrescriptionsPage: React.FC = () => {
 
                   {isPending ? (
                     <Link
-                      to={`/dispensing/new?prescription_id=${pr.id}`}
+                      to="/dispensing"
                       className="inline-flex items-center gap-2 bg-purple-800 hover:bg-purple-950 text-white font-bold text-xs px-5 py-2.5 rounded-full shadow-xs transition-all min-h-[40px]"
                     >
                       <span>Fulfill & Dispense</span>

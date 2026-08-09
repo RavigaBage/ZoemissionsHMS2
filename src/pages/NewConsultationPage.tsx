@@ -113,7 +113,7 @@ export const NewConsultationPage: React.FC = () => {
 
       const returnobj = consultationId 
         ? await api.patch<Consultation>(`/api/consultations/${consultationId}`, payload) 
-        : await api.post<Consultation>('/api/consultations/', payload);
+        : await api.post<Consultation>('/api/consultations', payload);
       
       showSuccess(consultationId ? 'Updated' : 'Saved', consultationId ? 'Consultation updated successfully.' : 'Consultation recorded successfully.');
       navigate('/dashboard');

@@ -40,7 +40,7 @@ export const ConsultationsPage: React.FC = () => {
   const handleDelete = async (c: Consultation) => {
     if (!window.confirm('Are you sure you want to delete this consultation?')) return;
     try {
-      await api.delete(`/api/consultations/\${c.id}`);
+      await api.delete(`/api/consultations/${c.id}`);
       showSuccess('Deleted', 'Consultation removed successfully.');
       fetchConsultations();
     } catch (err: any) {

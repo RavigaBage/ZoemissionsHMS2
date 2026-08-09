@@ -33,9 +33,8 @@ export const DashboardPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await api.get<[Queue]>('/api/queue');
+      const data = await api.get<Queue[]>('/api/queue');
       const list = Array.isArray(data) ? data : [];
-      console.log(list);
       setQueue(list);
     } catch (err: any) {
       setError(err.message || 'Failed to load clinic queue.');
@@ -55,23 +54,23 @@ export const DashboardPage: React.FC = () => {
   const safeQueue = Array.isArray(Queue) ? Queue : [];
 
   const filteredQueue = safeQueue.filter((e) => {
-    if (selectedStatus !== 'all' && e.current_stage !== selectedStatus) 
-      return false;
+    if (selectedStatus !== 'all' && e.current_stage !== selectedStatus && e.status !== selectedStatus) return false;
+    if (selectedLane !== 'all' && (e as any).lane !== selectedLane) return false;
+    if (selectedFlag !== 'all' && e.emergency_flag !== selectedFlag) return false;
     return true;
   });
-  console.log(filteredQueue,selectedStatus);
   // Metrics
   const totalQueue = safeQueue.filter((e) => e.status !== 'completed').length;
-  const emergencyCount = safeQueue.filter((e) => e.emergency_flag === 'red' && e.status !== 'completed').length;
+  const emergencyCount = safeQueue.filter((e) => (e as any).lane === 'emergency' && e.status !== 'completed').length;
   const redCount = safeQueue.filter((e) => e.emergency_flag === 'red' && e.status !== 'completed').length;
   const awaitingDoctor = safeQueue.filter((e) => e.current_stage === 'consultation').length;
   const awaitingPharmacy = safeQueue.filter((e) => e.current_stage === 'dispensing').length;
 
-  const statusLabels: Record<QueueStatus, { label: string; color: string }> = {
+  const statusLabels: Record<string, { label: string; color: string }> = {
     registered: { label: 'Awaiting Vitals', color: 'bg-blue-100 text-blue-800' },
-    vitals: { label: 'Awaiting Doctor', color: 'bg-amber-100 text-amber-800' },
-    consultation: { label: 'Awaiting Pharmacy', color: 'bg-purple-100 text-purple-800' },
-    dispensing: { label: 'Dispensed', color: 'bg-emerald-100 text-emerald-800' },
+    triaged: { label: 'Awaiting Doctor', color: 'bg-amber-100 text-amber-800' },
+    consulted: { label: 'Consulted', color: 'bg-purple-100 text-purple-800' },
+    pharmacy: { label: 'Awaiting Pharmacy', color: 'bg-purple-100 text-purple-800' },
     completed: { label: 'Completed', color: 'bg-gray-100 text-gray-700' },
   };
 
@@ -114,7 +113,7 @@ export const DashboardPage: React.FC = () => {
 
           {(user?.role === 'triage' || user?.role === 'registration' || user?.role === 'admin') && (
             <Link
-              to="/Queue/new"
+              to="/encounters/new"
               className="inline-flex items-center gap-2 bg-[var(--gold-600)] hover:bg-[var(--gold-700)] text-white font-bold text-sm px-5 py-2.5 rounded-full transition-all min-h-[44px] shadow-xs"
             >
               <Activity className="w-4 h-4" />
@@ -168,8 +167,8 @@ export const DashboardPage: React.FC = () => {
           {[
             { id: 'all', label: 'All Active' },
             { id: 'registered', label: '1. Awaiting Vitals' },
-            { id: 'triaged', label: '2. Awaiting Doctor' },
-            { id: 'consulted', label: '3. Awaiting Pharmacy' },
+            { id: 'consultation', label: '2. Awaiting Doctor' },
+            { id: 'dispensing', label: '3. Awaiting Pharmacy' },
             { id: 'completed', label: '4. Completed' },
           ].map((st) => (
             <button
@@ -242,7 +241,7 @@ export const DashboardPage: React.FC = () => {
       ) : (
         <div className="space-y-4">
           {filteredQueue.map((enc) => {
-            const stInfo = statusLabels[enc.status] || { label: enc.current_stage, color: 'bg-gray-100 text-gray-800' };
+            const stInfo = statusLabels[enc.status] || statusLabels[enc.current_stage] || { label: enc.current_stage, color: 'bg-gray-100 text-gray-800' };
 
             return (
               <div
@@ -255,9 +254,9 @@ export const DashboardPage: React.FC = () => {
                   {/* Patient Primary Details */}
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <TriageBadge flag="yellow" size="md" />
+                      <TriageBadge flag={enc.emergency_flag as any} size="md" />
 
-                      {enc.emergency_flag === 'emergency' && (
+                      {(enc as any).lane === 'emergency' && (
                         <span className="bg-red-700 text-white font-extrabold text-xs px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                           Emergency Lane
                         </span>

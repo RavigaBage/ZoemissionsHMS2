@@ -61,12 +61,12 @@ export const DispensingPage: React.FC = () => {
       const med = medications.find(m => m.id === prescription.medication_id);
       if (med) {
         if (prescription.quantity_prescribed > med.quantity_in_stock) {
-          showError('Low Stock Warning', `Not enough stock for \${med.name}. Available: \${med.quantity_in_stock}`);
+          showError('Low Stock Warning', `Not enough stock for ${med.name}. Available: ${med.quantity_in_stock}`);
           // Note: we don't block dispensing unless it's negative, but server will block it.
           // Wait, the prompt says "don't hard-block the dispense unless stock would go negative".
           // If server blocks it, that's fine.
         } else if (med.quantity_in_stock - prescription.quantity_prescribed <= med.reorder_threshold) {
-          showSuccess('Low Stock Alert', `\${med.name} is now running low.`);
+          showSuccess('Low Stock Alert', `${med.name} is now running low.`);
         }
       }
 

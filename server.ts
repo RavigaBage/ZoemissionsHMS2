@@ -413,6 +413,14 @@ async function startServer() {
     });
   });
 
+  app.get('/api/health', (_req, res) => {
+    return res.json({
+      status: 'online',
+      service: 'missions-clinic-api',
+      timestamp: new Date().toISOString(),
+    });
+  });
+
   // Staff (Admin only)
   app.get('/api/staff', authMiddleware, (req, res) => {
     return res.json(db.staff.map(({ pin, ...rest }) => rest));
@@ -434,6 +442,20 @@ async function startServer() {
     db.staff.push(newStaff);
     const { pin: _p, ...safeStaff } = newStaff;
     return res.status(201).json(safeStaff);
+  });
+
+  app.patch('/api/staff/:id/pin', authMiddleware, (req, res) => {
+    const staff = db.staff.find((s) => s.id === req.params.id);
+    if (!staff) {
+      return res.status(404).json({ message: "That record doesn't exist — it may have been removed." });
+    }
+    const { pin } = req.body;
+    if (!pin) {
+      return res.status(422).json({ message: 'Something required was left blank. Check the highlighted field.' });
+    }
+    staff.pin = String(pin).trim();
+    const { pin: _p, ...safeStaff } = staff;
+    return res.json(safeStaff);
   });
 
   app.patch('/api/staff/:id', authMiddleware, (req, res) => {
@@ -528,6 +550,38 @@ async function startServer() {
       ...patient,
       encounters,
     });
+  });
+
+  app.get('/api/queue', authMiddleware, (_req, res) => {
+    const queue = [...db.encounters].sort(sortByTicketRank).map((enc) => {
+      const patient = db.patients.find((p) => p.id === enc.patient_id) || null;
+      const stageByStatus: Record<EncounterItem['status'], string> = {
+        registered: 'registered',
+        triaged: 'consultation',
+        consulted: 'consultation',
+        pharmacy: 'dispensing',
+        completed: 'completed',
+      };
+      return {
+        id: enc.id,
+        patient_id: enc.patient_id,
+        encounter_id: enc.id,
+        queue_number: enc.ticket_number,
+        ticket_number: enc.ticket_number,
+        ticket_rank: enc.ticket_rank,
+        current_stage: stageByStatus[enc.status],
+        status: enc.status,
+        lane: enc.lane,
+        emergency_flag: enc.triage_flag,
+        triage_flag: enc.triage_flag,
+        assigned_staff_id: null,
+        created_at: enc.created_at,
+        updated_at: enc.updated_at,
+        patient,
+      };
+    });
+
+    return res.json(queue);
   });
 
   // Encounters / Queue

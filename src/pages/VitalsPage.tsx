@@ -40,7 +40,7 @@ export const VitalsPage: React.FC = () => {
   const handleDelete = async (v: Vitals) => {
     if (!window.confirm('Are you sure you want to delete this vitals record?')) return;
     try {
-      await api.delete(`/api/vitals/\${v.id}`);
+      await api.delete(`/api/vitals/${v.id}`);
       showSuccess('Deleted', 'Vitals removed successfully.');
       fetchVitals();
     } catch (err: any) {
